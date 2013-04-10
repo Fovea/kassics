@@ -4,7 +4,7 @@ Kassics.js v0.0.1
 
 Aim
 ---
-Provide fast 2d graphics using javascript even on older smartphones.
+Provide fast 2d graphics using javascript even on slow mobile platforms.
 
 Why?
 ----
