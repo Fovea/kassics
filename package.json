@@ -1,0 +1,20 @@
+{
+    "name": "kassics",
+    "description": "Lighting fast 2D graphics without canvas",
+    "keywords": [ "2d", "graphics", "canvas" ],
+    "version": "0.0.1",
+    "homepage": "https://github.com/Fovea/kassics",
+    "author": {
+        "name": "Jean-Christophe Hoelt",
+        "email": "hoelt@fovea.cc"
+    },
+    "main": "./kassics.js",
+    "repository": {
+        "type": "git",
+        "url":  "git://github.com:Fovea/jackbone.git"
+    },
+    "devDependencies"  : {
+        "jquery"     : ">=1.0.0",
+        "underscore" : ">=1.4.3"
+    }
+}
