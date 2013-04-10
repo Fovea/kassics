@@ -1,4 +1,4 @@
-Kassics.js v0.0.1
+Kassics.js v0.0.2
 =================
 (c)2013, Jean-Christophe Hoelt, Fovea.cc <hoelt@fovea.cc>
 

@@ -24,7 +24,7 @@
     }
 
     // Keep in sync with package.json and readme
-    Kassics.VERSION = "0.0.1";
+    Kassics.VERSION = "0.0.2";
 
     // TODO: get rid of JQuery and Underscore, use something like this:
     //
@@ -35,7 +35,7 @@
     // function html(id, html){ $(id).innerHTML = html; }
     // function css(id, style){ $(id).style.cssText += ';'+style; }
 
-    // Tiny browser detection, necessary(?) evil to know the name of the CSS rules.
+    // Tiny browser family detection, necessary(?) evil to know the name of the CSS rules.
     var Browser = {
         init: function () {
             this.prefix = this.search(this.dataPrefix) || 'ms';
@@ -64,31 +64,36 @@
     var cssTransform = '-' + Browser.prefix + '-transform';
 
     // Translate an image.
-    var ksPosition = function (x, y) {
+    var k6position = function (x, y) {
         this.css(cssTransform, 'translate3d(' + x + 'px,' + y + 'px,0)');
-        this.attr('x', x);
-        this.attr('y', y);
+        this.attr('k6x', x);
+        this.attr('k6y', y);
     };
 
     // Resize an image.
-    var ksSize = function (w, h) {
+    var k6size = function (w, h) {
         this.css('width', w);
         this.css('height', h);
     };
 
     // Change layer for an image.
-    var ksLayer = function (layer) {
+    var k6layer = function (layer) {
         this.css('z-index', layer);
     };
 
     // Set image draggable status.
-    var ksDraggable = function (state) {
-        var oldDraggable = this.attr('_drag');
+    var k6draggable = function (state) {
+        var oldDraggable = this.attr('k6drag');
         var newDraggable = state ? 'true' : 'false';
         if (oldDraggable !== newDraggable) {
-            this.attr('_drag', newDraggable);
+            this.attr('k6drag', newDraggable);
             this.kassics.stopDragging(this);
         }
+    };
+
+    // Change image opacity.
+    var k6opacity = function (opacity) {
+        this.css('opacity', opacity);
     };
 
     // Kassics, a 2D drawing area.
@@ -124,8 +129,8 @@
             var $image = $(options.image);
 
             // Generate a CID, store it in the element.
-            var cid = _.uniqueId('kx_');
-            $image.attr('cid', cid);
+            var cid = _.uniqueId('k6_');
+            $image.attr('k6cid', cid);
 
             // Make it a 'floating' image.
             $image.css('display', 'block');
@@ -135,10 +140,10 @@
             this._extendImage($image);
 
             // Set initial values from options.
-            $image.ksLayer(options.layer);
-            $image.ksPosition(options.x, options.y);
-            $image.ksSize(options.width, options.height);
-            $image.ksDraggable(options.draggable);
+            $image.k6layer(options.layer);
+            $image.k6position(options.x, options.y);
+            $image.k6size(options.width, options.height);
+            $image.k6draggable(options.draggable);
 
             // Add to the registry
             this.images[cid] = $image;
@@ -153,15 +158,16 @@
             var that = this;
 
             // Setters
-            $image.ksPosition = ksPosition;
-            $image.ksSize = ksSize;
-            $image.ksLayer = ksLayer;
-            $image.ksDraggable = ksDraggable;
+            $image.k6position = k6position;
+            $image.k6size = k6size;
+            $image.k6layer = k6layer;
+            $image.k6draggable = k6draggable;
+            $image.k6opacity = k6opacity;
             $image.kassics = this;
 
             // Remove from Stage
-            $image.ksRemove = function () {
-                var cid = this.attr('cid');
+            $image.k6remove = function () {
+                var cid = this.attr('k6cid');
                 delete that.images[cid];
                 this.remove();
             }
@@ -202,29 +208,29 @@
 
         _dragStart: function (t) {
             // Draggable target.
-            if (t.$target.attr('_drag') === 'true') {
-                t.$drag = this.images[t.$target.attr('cid')];
+            if (t.$target.attr('k6drag') === 'true') {
+                t.$drag = this.images[t.$target.attr('k6cid')];
                 t.dragStartX = t.x;
                 t.dragStartY = t.y;
-                t.dragTargetX = +t.$target.attr('x');
-                t.dragTargetY = +t.$target.attr('y');
-                t.$drag.trigger('ksdragstart', {target:t.$drag, x:t.dragTargetY, y:t.dragTargetY});
+                t.dragTargetX = +t.$target.attr('k6x');
+                t.dragTargetY = +t.$target.attr('k6y');
+                t.$drag.trigger('k6dragstart', {target:t.$drag, x:t.dragTargetY, y:t.dragTargetY});
             }
         },
         _dragMove: function (t) {
             if (t.$drag) {
                 var newX = t.x - t.dragStartX + t.dragTargetX;
                 var newY = t.y - t.dragStartY + t.dragTargetY;
-                t.$drag.ksPosition(newX, newY);
-                t.$drag.trigger('ksdragmove', {target:t.$drag, x:newX, y:newY});
+                t.$drag.k6position(newX, newY);
+                t.$drag.trigger('k6dragmove', {target:t.$drag, x:newX, y:newY});
             }
         },
         _dragEnd: function (t) {
             if (t.$drag) {
                 var newX = t.x - t.dragStartX + t.dragTargetX;
                 var newY = t.y - t.dragStartY + t.dragTargetY;
-                t.$drag.ksPosition(newX, newY);
-                t.$drag.trigger('ksdragend', {target:t.$drag, x:newX, y:newY});
+                t.$drag.k6position(newX, newY);
+                t.$drag.trigger('k6dragend', {target:t.$drag, x:newX, y:newY});
             }
         },
 
