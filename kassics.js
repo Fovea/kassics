@@ -6,6 +6,25 @@
 //     Requires JQuery and Underscore or similar javascript libraries.
 
 (function () {
+    'use strict';
+
+    // Initial Setup
+    // -------------
+
+    // Save a reference to the global object (`window` in the browser, `exports`
+    // on the server).
+    var root = this;
+
+    // Exported for both the browser and the server.
+    var Kassics;
+    if (typeof exports !== 'undefined') {
+        Kassics = exports;
+    } else {
+        Kassics = root.Kassics = {};
+    }
+
+    // Keep in sync with package.json and readme
+    Kassics.VERSION = "0.0.1";
 
     // TODO: get rid of JQuery and Underscore, use something like this:
     //
@@ -42,7 +61,7 @@
     Browser.init();
 
     // Preload the CSS transform rule name
-    var cssTransform = '-' + bowser.prefix + '-transform';
+    var cssTransform = '-' + Browser.prefix + '-transform';
 
     // Translate an image.
     var ksPosition = function (x, y) {
@@ -73,17 +92,14 @@
     };
 
     // Kassics, a 2D drawing area.
-    var Kassics = function (options) {
+    var Stage = Kassics.Stage = function (options) {
         this.options = options;
         var images = this.images = {};
         this.setElement(options.el || $('<div />'));
         this.touches = {};
     };
 
-    // Keep in sync with package.json and readme
-    Kassics.version = "0.0.1";
-
-    _.extend(Kassics.prototype, {
+    _.extend(Stage.prototype, {
         
         // Change the element to render to.
         setElement: function (el) {
@@ -103,7 +119,7 @@
         },
 
         // Add an image to the stage
-        // returns a KassicsImage.
+        // returns a Kassics.Image.
         add: function (options) {
             var $image = $(options.image);
 
@@ -143,7 +159,7 @@
             $image.ksDraggable = ksDraggable;
             $image.kassics = this;
 
-            // Remove from Kassics
+            // Remove from Stage
             $image.ksRemove = function () {
                 var cid = this.attr('cid');
                 delete that.images[cid];
@@ -288,7 +304,5 @@
         },
     });
 
-    root.Kassics = Kassics;
     return Kassics;
-
 }).call(this);
