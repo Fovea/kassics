@@ -5,6 +5,9 @@
 
 //     Requires Underscore or similar javascript library.
 
+// TODO
+// remove animations from CSS when removing an element.
+
 (function () {
     'use strict';
 
@@ -51,6 +54,9 @@
         // Perform the animations
         idle: function (timestamp) {
 
+            // Benchmark idle starts
+            var t0 = +new Date();
+
             // Calculate delta since last frame
             var dt = timestamp - this.lastframe;
             if (this.lastframe === 0)
@@ -63,7 +69,21 @@
             _.each(this.animations, function (a) {
                 a.idle(timestamp, dt);
             });
+
+            // Benchmark idle ends
+            var t1 = +new Date();
+
+            // Adjust counters, show stats.
+            this.numframe = 1 + (this.numframe || 0);
+            this.totalidle = (t1-t0) + (this.totalidle || 0);
+            this.totaldt = dt + (this.totaldt || 0);
+            this.showStats();
         },
+ 
+        // Show averaged animations statistics every seconds.
+        showStats: _.throttle(function () {
+            console.log('idle: ' + Math.round(this.totalidle/this.numframe) + 'ms, dt: ' + Math.round(this.totaldt/this.numframe) + 'ms');
+        }, 1000),
 
         // Add an animation, return an animationID
         add: function (animation) {
@@ -99,10 +119,10 @@
             }
             else {
                 // Fallback to setInterval.
-                this.intervalID = window.setInterval(17, function () {
+                this.intervalID = window.setInterval(function () {
                     var timestamp = +new Date();
-                    idle(timestamp);
-                });
+                    that.idle(timestamp);
+                }, 17);
             }
         },
 
@@ -154,20 +174,35 @@
     };
     Browser.init();
 
-    // Preload the CSS transform rule name
+    // Preload the CSS rules names
     var cssTransform = '-' + Browser.prefix + '-transform';
+    var cssKeyframes = '@keyframes';
+
+    // Preload the Events names
+    var eventAnimationEnd = 'animationend';
+
+    // Fix browser specific CSS rules names
+    if (Browser.prefix === 'webkit') {
+        cssKeyframes = "@-webkit-keyframes";
+        eventAnimationEnd = 'webkitAnimationEnd';
+    }
+    else if (Browser.prefix === 'o') {
+        eventAnimationEnd = 'oanimationend';
+    }
 
     // Translate an image.
     var k6position = function (x, y) {
         this.k6x = x;
         this.k6y = y;
-        this.style.webkitTransform = 'translate3d(' + x + 'px,' + y + 'px,0)';
+        k6update.call(this);
+        // this.style.webkitTransform = 'translate3d(' + x + 'px,' + y + 'px,0)';
     };
 
     // Resize an image.
     var k6size = function (w, h) {
-        this.style.width = w + 'px';
-        this.style.height = h + 'px';
+        this.k6w = w;
+        this.k6h = h;
+        k6update.call(this);
     };
 
     // Change layer for an image.
@@ -181,11 +216,8 @@
     };
 
     // ...
-    var k6update = function (p) {
-        this.style.width = p.k6w + 'px';
-        this.style.height = p.k6h + 'px';
-        this.style.opacity = p.k6a;
-        this.style.webkitTransform = 'translate3d(' + p.k6x + 'px,' + p.k6y + 'px,0)';
+    var k6update = function () {
+        this.style.webkitTransform = 'translate3d(' + (this.k6x-0.5) + 'px,' + (this.k6y-0.5) + 'px,0) scale3d(' + this.k6w + ',' + this.k6h + ',1)';
     };
 
     // Set image draggable status.
@@ -196,6 +228,83 @@
             this.setAttribute('k6drag', newDraggable);
             this.k6stage.stopDragging(this);
         }
+    };
+
+    // frames, array of frame.
+    // each frame: {
+    //     p: profress,
+    //     x,y: position,
+    //     w,h: size,
+    //     angle: rotation,
+    //     opacity: alpha transparency
+    // }
+    // callback called when animation is finished.
+    var k6animationID = 0;
+    var k6animate = function (frames, callback) {
+
+        var name = 'k6a_' + (++k6animationID);
+
+        var that = this;
+        var k6animation = this._k6animation || {};
+        var cssframes;
+
+        if (callback) {
+            var callbackOnce = _.once(function () {
+                that.style.webkitAnimationName = 'none';
+                that.removeEventListener(eventAnimationEnd, callbackOnce, false);
+                callback();
+            });
+        }
+
+        if (k6animation.cssframes) {
+
+            // Update the existing CSS rule.
+            cssframes = k6animation.cssframes;
+            cssframes.name = name;
+
+            // Clear animation.
+            while (cssframes.length > 0) {
+                var frame = cssframes[0];
+                cssframes.deleteRule(frame.keyText);
+            }
+
+            // Call callback and clear ongoing animation callback
+            var oldcallback = k6animation.callback;
+            if (oldcallback) {
+                oldcallback.call(this);
+            }
+        }
+        else {
+            // Create keyframes rule element
+            document.styleSheets[0].insertRule(cssKeyframes + " " + name + " { }", 0);
+            cssframes = k6animation.cssframes = document.styleSheets[0].cssRules[0];
+
+            // Store animation datas in the element.
+            this._k6animation = k6animation;
+        }
+
+        if (frames.length === 0) return;
+        var duration = frames[frames.length - 1].t;
+
+        // Firefox called appendRule `insertRule` before normalization.
+        var appendRule = cssframes.appendRule || cssframes.insertRule;
+
+        var idx = 0;
+        for (var i in frames) {
+            var kf = frames[i];
+            var rule = Math.round(kf.t * 100 / duration) + "% { -webkit-transform: translate3d(" + kf.x + "px," + kf.y + "px,0) scale3d(" + kf.w + "," + kf.h + ", 1); opacity: " + kf.o + "; } ";
+            appendRule.call(cssframes, rule);
+        }
+
+        if (callback) {
+            k6animation.callback = callbackOnce;
+            this.addEventListener(eventAnimationEnd, callbackOnce, false);
+        }
+
+        // this.style.webkitAnimationIterationCount = 1;
+        // this.style.webkitAnimationTimingFunction = 'linear';
+        // this.style.webkitAnimationDuration = duration + 's';
+        this.style.webkitAnimation = name + ' ' + duration + 's linear 0s 1';
     };
 
     // Select browser specific optimized code
@@ -210,6 +319,7 @@
         el.k6layer = k6layer;
         el.k6draggable = k6draggable;
         el.k6opacity = k6opacity;
+        el.k6animate = k6animate;
         el.k6update = k6update;
         el.k6stage = stage;
 
@@ -311,6 +421,8 @@
             image.style.position = 'absolute';
             image.style.left = 0;
             image.style.top = 0;
+            image.style.width  = '1px';
+            image.style.height = '1px';
             k6extend(this, image);
 
             // Set initial values from options.
