@@ -27,7 +27,7 @@
     }
 
     // Keep in sync with package.json and readme
-    Kassics.VERSION = "0.0.2";
+    Kassics.VERSION = "0.0.3";
 
     // Quality of effects, client could adjust, eventually per device.
     Kassics.qualityCoef = 1.0;

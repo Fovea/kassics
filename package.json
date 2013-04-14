@@ -2,7 +2,7 @@
     "name": "kassics",
     "description": "Lighting fast 2d graphics without canvas",
     "keywords": [ "2d", "graphics", "canvas" ],
-    "version": "0.0.2",
+    "version": "0.0.3",
     "homepage": "https://github.com/Fovea/kassics",
     "author": {
         "name": "Jean-Christophe Hoelt",
