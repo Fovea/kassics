@@ -9,7 +9,7 @@
 
     var root = this;
 
-    var USE_KASSICS_ANIMATIONS = false;
+    var USE_KASSICS_ANIMATIONS = true;
 
     // Adds a particle emiter class to Kassics.
     var ParticleEmiter = root.Kassics.ParticleEmiter = function (options) {
@@ -38,7 +38,8 @@
             initialVXRandom: options.initialVXRandom || 1.0,
             initialVYRandom: options.initialVYRandom || 1.0,
             emissionRate: options.emissionRate || 0.0,
-            emissionRateRandom: options.emissionRateRandom || 0.0
+            emissionRateRandom: options.emissionRateRandom || 0.0,
+            useKassicsAnimation: options.useKassicsAnimation || USE_KASSICS_ANIMATIONS
         };
 
         // Living particles
@@ -78,53 +79,104 @@
             }
         },
 
+        // Move the emiter
+        move: function (x,y,w,h) {
+            this.def.emiterCenterX = x;
+            this.def.emiterCenterY = y;
+            if (typeof h !== 'undefined') {
+                this.def.emiterSizeX = w;
+                this.def.emiterSizeY = h;
+            }
+        },
+
         // Initialize an existing particle
         launchParticle: function (p) {
             var d = this.def;
-            p.x = d.emiterCenterX + (Math.random() - 0.5) * d.emiterSizeX;
-            p.y = d.emiterCenterY + (Math.random() - 0.5) * d.emiterSizeY;
+            var x = p.x = d.emiterCenterX + (Math.random() - 0.5) * d.emiterSizeX;
+            var y = p.y = d.emiterCenterY + (Math.random() - 0.5) * d.emiterSizeY;
 
-            p.vx = d.initialVX + plusOrMinus() * d.initialVXRandom;
-            p.vy = d.initialVY + plusOrMinus() * d.initialVYRandom;
+            var vx = p.vx = d.initialVX + plusOrMinus() * d.initialVXRandom;
+            var vy = p.vy = d.initialVY + plusOrMinus() * d.initialVYRandom;
             p.age = 0.0;
-            p.lifeTimeFactor = randomFactor(d.lifeTimeRandom);
-            p.alphaFactor = randomFactor(d.alphaRandom);
-            p.sizeFactor = randomFactor(d.sizeRandom);
+            var lifeTimeFactor = p.lifeTimeFactor = randomFactor(d.lifeTimeRandom);
+            var alphaFactor = p.alphaFactor = randomFactor(d.alphaRandom);
+            var sizeFactor = p.sizeFactor = randomFactor(d.sizeRandom);
             
-            if (USE_KASSICS_ANIMATIONS) {
-                // Make frames
-                // while (p.age
-                // while (p.age > p.lifeTimeFactor * defLifeTime) {
+            if (d.useKassicsAnimation) {
 
+                // Precompute size and alpha for keyframes.
+                var size0 = sizeFactor * d.size0;
+                var size1 = sizeFactor * d.size1;
+                var size2 = sizeFactor * d.size2;
+                var alpha0 = alphaFactor * d.alpha0;
+                var alpha1 = alphaFactor * d.alpha1;
+                var alpha2 = alphaFactor * d.alpha2;
+                var halfGravityY = d.gravityY * 0.5;
+
+                // Make frames
                 // note: x(t) = x0 + t * vx0
                 //       y(t) = y0 + t * vy0 + t^2 * gravity/2
+                var frames = [];
                  
-                var t1 = p.lifeTimeFactor * d.halfTime;
-                var t2 = p.lifeTimeFactor * d.lifeTime;
-                var frame0 = {
-                    t: 0,
-                    x: p.x,
-                    y: p.y,
-                    w: p.sizeFactor * d.size0,
-                    h: p.sizeFactor * d.size0,
-                    o: p.alphaFactor * d.alpha0
-                };
-                var frame1 = {
-                    t: t1,
-                    x: p.x + t1 * p.vx,
-                    y: p.y + t1 * p.vy + t1*t1 * d.gravityY * 0.5,
-                    w: p.sizeFactor * d.size1,
-                    h: p.sizeFactor * d.size1,
-                    o: p.alphaFactor * d.alpha1
-                };
-                var frame2 = {
+                var t1 = lifeTimeFactor * d.halfTime;
+                var t2 = lifeTimeFactor * d.lifeTime;
+
+                // First position of the animation.
+                frames.push({ t: 0, x: x, y: y, w: size0, h: size0, o: alpha0 });
+
+                // If gravity is applied, movement is non linear.
+                // Let's compute the full trajectory.
+                if (d.gravityY > 0) {
+                    var dt = 0.25;
+                    var t = dt;
+
+                    // From birth to halfTime
+                    while (t < t1) {
+                        var coef = t / t1;
+                        var oneMinusCoef = (1.0 - coef);
+                        var s = oneMinusCoef * size0 + coef * size1;
+                        var o = oneMinusCoef * alpha0 + coef * alpha1;
+                        frames.push({
+                            t: t,
+                            x: x + t * vx,
+                            y: y + t * vy + t*t * halfGravityY,
+                            w: s, h: s, o: o 
+                        });
+                        t += dt;
+                    }
+
+                    // From halfTime to death
+                    while (t < t2 - dt) {
+                        var coef = (t - t1) / (t2 - t1);
+                        var oneMinusCoef = (1.0 - coef);
+                        var s = oneMinusCoef * size1 + coef * size2;
+                        var o = oneMinusCoef * alpha1 + coef * alpha2;
+                        frames.push({
+                            t: t,
+                            x: x + t * vx,
+                            y: y + t * vy + t*t * halfGravityY,
+                            w: s, h: s, o: o
+                        });
+                        t += dt;
+                    }
+                }
+                else {
+                    // No gravity => purely linear movement.
+                    frames.push({
+                        t: t1,
+                        x: x + t1 * vx,
+                        y: y + t1 * vy + t1*t1 * halfGravityY,
+                        w: size1, h: size1, o: alpha1
+                    });
+                }
+
+                // Last position of the animation
+                frames.push({
                     t: t2,
-                    x: p.x + t2 * p.vx,
-                    y: p.y + t2 * p.vy + t2*t2 * d.gravityY * 0.5,
-                    w: p.sizeFactor * d.size2,
-                    h: p.sizeFactor * d.size2,
-                    o: p.alphaFactor * d.alpha2
-                };
+                    x: x + t2 * vx,
+                    y: y + t2 * vy + t2*t2 * halfGravityY,
+                    w: size2, h: size2, o: alpha2
+                });
 
                 var that = this;
                 var removeParticle = function () {
@@ -133,7 +185,7 @@
                     that.pool.push(p);
                 };
 
-                p.k6image.k6animate([frame0, frame1, frame2], removeParticle);
+                p.k6image.k6animate(frames, removeParticle);
             }
         },
 
@@ -203,7 +255,7 @@
             var defGravityY = this.def.gravityY;
 
             // Animate particles
-            if (!USE_KASSICS_ANIMATIONS) {
+            if (!this.def.useKassicsAnimation) {
                 for (var i in this.particles) {
                     var p = this.particles[i];
                     p.x += dt * p.vx;
@@ -244,7 +296,7 @@
             }
 
             // Move elements on the view
-            if (!USE_KASSICS_ANIMATIONS) {
+            if (!this.def.useKassicsAnimation) {
                 this.refreshStage();
             }
         },

@@ -56,6 +56,9 @@
 
             // Benchmark idle starts
             var t0 = +new Date();
+            if (!this.startTime) this.startTime = t0;
+            // console.log('--------------------------------------');
+            // console.log('>> Scheduler: ' + (t0 - this.startTime));
 
             // Calculate delta since last frame
             var dt = timestamp - this.lastframe;
@@ -72,6 +75,8 @@
 
             // Benchmark idle ends
             var t1 = +new Date();
+            // console.log('<< Scheduler: ' + (t1 - this.startTime));
+            // console.log('--------------------------------------');
 
             // Adjust counters, show stats.
             this.numframe = 1 + (this.numframe || 0);
@@ -242,19 +247,10 @@
     var k6animationID = 0;
     var k6animate = function (frames, callback) {
 
-        var name = 'k6a_' + (++k6animationID);
-
         var that = this;
+        var name = 'k6a_' + (++k6animationID);
         var k6animation = this._k6animation || {};
         var cssframes;
-
-        if (callback) {
-            var callbackOnce = _.once(function () {
-                that.style.webkitAnimationName = 'none';
-                that.removeEventListener(eventAnimationEnd, callbackOnce, false);
-                callback();
-            });
-        }
 
         if (k6animation.cssframes) {
 
@@ -296,15 +292,17 @@
             appendRule.call(cssframes, rule);
         }
 
+        this.style.webkitAnimation = name + ' ' + duration + 's linear 0s 1';
+
         if (callback) {
+            var callbackOnce = _.once(function () {
+                that.style.webkitAnimationName = 'none';
+                that.removeEventListener(eventAnimationEnd, callbackOnce, false);
+                callback();
+            });
             k6animation.callback = callbackOnce;
             this.addEventListener(eventAnimationEnd, callbackOnce, false);
         }
-
-        // this.style.webkitAnimationIterationCount = 1;
-        // this.style.webkitAnimationTimingFunction = 'linear';
-        // this.style.webkitAnimationDuration = duration + 's';
-        this.style.webkitAnimation = name + ' ' + duration + 's linear 0s 1';
     };
 
     // Select browser specific optimized code
@@ -499,7 +497,7 @@
                 t.x = e.clientX;
                 t.y = e.clientY;
                 _dragEnd(t);
-                delete this.k6stage.touches[touch.identifier];
+                delete this.k6stage.touches[identifier];
             }
             return false;
         },
