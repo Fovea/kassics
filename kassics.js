@@ -351,7 +351,7 @@
             t.dragStartY = t.y;
             t.dragTargetX = +t.target.k6x;
             t.dragTargetY = +t.target.k6y;
-            t.drag.k6trigger('dragstart', {target:t.drag, x:t.dragTargetY, y:t.dragTargetY});
+            t.drag.k6trigger('dragstart', {target:t.drag, x:t.dragTargetX, y:t.dragTargetY});
         }
     };
 
