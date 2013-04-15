@@ -195,19 +195,32 @@
         eventAnimationEnd = 'oanimationend';
     }
 
-    // Translate an image.
+    // Translate an element.
     var k6position = function (x, y) {
         this.k6x = x;
         this.k6y = y;
-        k6update.call(this);
+        this.k6update();
         // this.style.webkitTransform = 'translate3d(' + x + 'px,' + y + 'px,0)';
     };
 
-    // Resize an image.
+    // Resize an element.
     var k6size = function (w, h) {
         this.k6w = w;
         this.k6h = h;
-        k6update.call(this);
+        this.k6update();
+    };
+
+    // Update position of an image element
+    var k6updateImage = function () {
+        this.style.webkitTransform = 'translate3d(' + (this.k6x-0.5) + 'px,' + (this.k6y-0.5) + 'px,0) scale3d(' + this.k6w + ',' + this.k6h + ',1)';
+    };
+
+    // Update position of a text element
+    var k6updateText = function () {
+        this.style.left = this.k6x + 'px';
+        this.style.top = this.k6y + 'px';
+        this.style.width = this.k6w + 'px';
+        this.style.height = this.k6h + 'px';
     };
 
     // Change layer for an image.
@@ -218,11 +231,6 @@
     // Change image opacity.
     var k6opacity = function (opacity) {
         this.style.opacity = opacity;
-    };
-
-    // ...
-    var k6update = function () {
-        this.style.webkitTransform = 'translate3d(' + (this.k6x-0.5) + 'px,' + (this.k6y-0.5) + 'px,0) scale3d(' + this.k6w + ',' + this.k6h + ',1)';
     };
 
     // Set image draggable status.
@@ -309,6 +317,22 @@
     // if (Browser.prefix === 'webkit') {
     // }
 
+    var k6extendImage = function (stage, el) {
+        // Set defaults
+        k6extend(stage, el);
+
+        // Set image specific methods
+        el.k6update = k6updateImage;
+    };
+
+    var k6extendText = function (stage, el) {
+        // Set defaults
+        k6extend(stage, el);
+
+        // Set image specific methods
+        el.k6update = k6updateText;
+    };
+
     // Adds Kassics API to a DOM element.
     var k6extend = function (stage, el) {
         // Setters
@@ -318,7 +342,6 @@
         el.k6draggable = k6draggable;
         el.k6opacity = k6opacity;
         el.k6animate = k6animate;
-        el.k6update = k6update;
         el.k6stage = stage;
 
         // Events API
@@ -339,7 +362,7 @@
         el.k6remove = function () {
             this.parentNode.removeChild(this);
         };
-    }
+    };
 
     // Manage draggable elements.
     //
@@ -391,7 +414,7 @@
         // Change the element to render to.
         setElement: function (el) {
             this.el = el;
-            k6extend(this, el);
+            k6extendImage(this, el);
             this._configure();
         },
 
@@ -405,33 +428,46 @@
             this.el.style.padding  = '0';
         },
 
-        // Add an image to the stage
-        // returns a Kassics.Image.
+        // Add an element to the stage.
+        // if options.image is set, returns a Kassics.Image.
+        // if options.text is set, returns a Kassics.Text.
         add: function (options) {
+
             var image = options.image;
+            var text = options.text;
+            var el = text || image;
 
             // Generate a CID, store it in the element.
             var cid = _.uniqueId('k6_');
-            image.id = cid;
+            el.id = cid;
 
             // Make it a 'floating' image.
-            image.style.display = 'block';
-            image.style.position = 'absolute';
-            image.style.left = 0;
-            image.style.top = 0;
-            image.style.width  = '1px';
-            image.style.height = '1px';
-            k6extend(this, image);
+            el.style.display = 'block';
+            el.style.position = 'absolute';
+            if (image) {
+                el.style.left = 0;
+                el.style.top = 0;
+                el.style.width  = '1px';
+                el.style.height = '1px';
+                k6extendImage(this, el);
+            }
+            else if (text) {
+                k6extendText(this, el);
+            }
 
             // Set initial values from options.
-            image.k6layer(options.layer);
-            image.k6position(options.x, options.y);
-            image.k6size(options.width, options.height);
-            image.k6draggable(options.draggable);
+            el.k6layer(options.layer);
+            el.k6draggable(options.draggable);
 
-            // Append and return the image.
-            this.el.appendChild(image);
-            return image;
+            el.k6x = options.x;
+            el.k6y = options.y;
+            el.k6w = options.width;
+            el.k6h = options.height;
+            el.k6update();
+
+            // Append and return the el.
+            this.el.appendChild(el);
+            return el;
         },
 
         bindEvents: function () {
