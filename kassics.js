@@ -1,4 +1,4 @@
-//     Kassics.js 0.0.1
+//     Kassics.js 0.0.4
 
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Kassics may be freely distributed under the MIT license.
@@ -27,7 +27,7 @@
     }
 
     // Keep in sync with package.json and readme
-    Kassics.VERSION = "0.0.3";
+    Kassics.VERSION = "0.0.4";
 
     // Quality of effects, client could adjust, eventually per device.
     Kassics.qualityCoef = 1.0;
