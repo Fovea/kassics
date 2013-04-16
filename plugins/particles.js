@@ -39,7 +39,7 @@
             initialVYRandom: options.initialVYRandom || 1.0,
             emissionRate: options.emissionRate || 0.0,
             emissionRateRandom: options.emissionRateRandom || 0.0,
-            useKassicsAnimation: options.useKassicsAnimation || USE_KASSICS_ANIMATIONS
+            useKassicsAnimations: options.useKassicsAnimations || USE_KASSICS_ANIMATIONS
         };
 
         // Living particles
@@ -92,17 +92,24 @@
         // Initialize an existing particle
         launchParticle: function (p) {
             var d = this.def;
-            var x = p.x = d.emiterCenterX + (Math.random() - 0.5) * d.emiterSizeX;
-            var y = p.y = d.emiterCenterY + (Math.random() - 0.5) * d.emiterSizeY;
-
-            var vx = p.vx = d.initialVX + plusOrMinus() * d.initialVXRandom;
-            var vy = p.vy = d.initialVY + plusOrMinus() * d.initialVYRandom;
-            p.age = 0.0;
-            var lifeTimeFactor = p.lifeTimeFactor = randomFactor(d.lifeTimeRandom);
-            var alphaFactor = p.alphaFactor = randomFactor(d.alphaRandom);
-            var sizeFactor = p.sizeFactor = randomFactor(d.sizeRandom);
             
-            if (d.useKassicsAnimation) {
+            // Initial posiiton
+            var x = d.emiterCenterX + (Math.random() - 0.5) * d.emiterSizeX;
+            var y = d.emiterCenterY + (Math.random() - 0.5) * d.emiterSizeY;
+            
+            // Initial speed
+            var vx = d.initialVX + plusOrMinus() * d.initialVXRandom;
+            var vy = d.initialVY + plusOrMinus() * d.initialVYRandom;
+            
+            // Factors used to make this particle unique
+            var lifeTimeFactor = randomFactor(d.lifeTimeRandom);
+            var alphaFactor = randomFactor(d.alphaRandom);
+            var sizeFactor = randomFactor(d.sizeRandom);
+
+            // Initially, age is 0.
+            p.age = 0.0;
+            
+            if (d.useKassicsAnimations) {
 
                 // Precompute size and alpha for keyframes.
                 var size0 = sizeFactor * d.size0;
@@ -114,7 +121,7 @@
                 var halfGravityY = d.gravityY * 0.5;
 
                 // Make frames
-                // note: x(t) = x0 + t * vx0
+                // Note: x(t) = x0 + t * vx0
                 //       y(t) = y0 + t * vy0 + t^2 * gravity/2
                 var frames = [];
                  
@@ -185,7 +192,16 @@
                     that.pool.push(p);
                 };
 
-                p.k6image.k6animate(frames, removeParticle);
+                Kassics.k6animate.call(p.k6image, frames, removeParticle);
+            }
+            else {
+                p.x = x;
+                p.y = y;
+                p.vx = vx;
+                p.vy = vy;
+                p.lifeTimeFactor = lifeTimeFactor;
+                p.alphaFactor = alphaFactor;
+                p.sizeFactor = sizeFactor;
             }
         },
 
@@ -215,10 +231,10 @@
                     k6image: k6image,
                 };
             }
-            p.id = ++this.particleId;
-            this.particles[p.id] = p;
+            var id = p.id = ++this.particleId;
+            this.particles[id] = p;
             this.launchParticle(p);
-            return this.particleId;
+            return id;
         },
 
         /*
@@ -255,7 +271,7 @@
             var defGravityY = this.def.gravityY;
 
             // Animate particles
-            if (!this.def.useKassicsAnimation) {
+            if (!this.def.useKassicsAnimations) {
                 for (var i in this.particles) {
                     var p = this.particles[i];
                     p.x += dt * p.vx;
@@ -296,7 +312,7 @@
             }
 
             // Move elements on the view
-            if (!this.def.useKassicsAnimation) {
+            if (!this.def.useKassicsAnimations) {
                 this.refreshStage();
             }
         },
