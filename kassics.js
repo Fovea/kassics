@@ -1,12 +1,13 @@
 //     Kassics.js 0.0.4
-
+//
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Kassics may be freely distributed under the MIT license.
-
+//
 //     Requires Underscore or similar javascript library.
-
-// TODO
-// remove animations from CSS when removing an element.
+//
+// TODO:
+// - Remove animations from CSS when removing an element.
+// - Remove dependency over underscore.
 
 (function () {
     'use strict';
@@ -18,7 +19,7 @@
     // on the server).
     var root = this;
 
-    // Exported for both the browser and the server.
+    // Kassics is exported for both the browser and the server.
     var Kassics;
     if (typeof exports !== 'undefined') {
         Kassics = exports;
@@ -32,21 +33,32 @@
     // Quality of effects, client could adjust, eventually per device.
     Kassics.qualityCoef = 1.0;
 
-    // Animations scheduler.
-    // constructor
+    // Kassics features an animation Scheduler, attached to each `Stage`
+    // The animation scheduler will run the `idle(timestamp,dt)` method
+    // regulary on registred object. Objects can register an unregister
+    // to a Scheduler using `add()` and `remove()` methods.
     var Scheduler = function () {
+
+        // Our collection of animations, organized by id.
         this.animations = {};
+
+        // Auto-incremental animation id
         this.nextAnimationId = 0;
+
+        // Timestamp of last call to idle. Used to compute dt (delta t)
         this.lastframe = 0;
 
+        // requestAnimationFrame and cancelAnimationFrame may have
+        // different names on different browsers.
         this.requestAnimationFrame = window.requestAnimationFrame ||
             window.mozRequestAnimationFrame ||
             window.webkitRequestAnimationFrame ||
             window.msRequestAnimationFrame;
-
         this.cancelAnimationFrame = window.cancelAnimationFrame ||
             window.mozCancelAnimationFrame;
 
+        // Enable to show performance statistics on the console.
+        this.statistics = false;
     };
 
     _.extend(Scheduler.prototype, {
@@ -54,11 +66,10 @@
         // Perform the animations
         idle: function (timestamp) {
 
-            // Benchmark idle starts
-            var t0 = +new Date();
-            if (!this.startTime) this.startTime = t0;
-            // console.log('--------------------------------------');
-            // console.log('>> Scheduler: ' + (t0 - this.startTime));
+            if (this.statistics) {
+                // Benchmark idle starts
+                var t0 = +new Date();
+            }
 
             // Calculate delta since last frame
             var dt = timestamp - this.lastframe;
@@ -73,21 +84,21 @@
                 a.idle(timestamp, dt);
             });
 
-            // Benchmark idle ends
-            var t1 = +new Date();
-            // console.log('<< Scheduler: ' + (t1 - this.startTime));
-            // console.log('--------------------------------------');
+            if (this.statistics) {
+                // Benchmark idle ends
+                var t1 = +new Date();
 
-            // Adjust counters, show stats.
-            this.numframe = 1 + (this.numframe || 0);
-            this.totalidle = (t1-t0) + (this.totalidle || 0);
-            this.totaldt = dt + (this.totaldt || 0);
-            this.showStats();
+                // Adjust counters, show stats.
+                this._numframe = 1 + (this._numframe || 0);
+                this._totalidle = (t1-t0) + (this._totalidle || 0);
+                this._totaldt = dt + (this._totaldt || 0);
+                this._showStats();
+            }
         },
  
         // Show averaged animations statistics every seconds.
-        showStats: _.throttle(function () {
-            console.log('idle: ' + Math.round(this.totalidle/this.numframe) + 'ms, dt: ' + Math.round(this.totaldt/this.numframe) + 'ms');
+        _showStats: _.throttle(function () {
+            console.log('idle: ' + Math.round(this._totalidle/this._numframe) + 'ms, dt: ' + Math.round(this._totaldt/this._numframe) + 'ms');
         }, 1000),
 
         // Add an animation, return an animationID
@@ -145,20 +156,15 @@
         }
     });
 
-    // TODO: get rid of JQuery and Underscore, use something like this:
-    //
-    // mini-pico-tiny convenience micro-framework, ymmv
-    // (borrowed from http://mir.aculo.us)
-    //
-    // function $(id) { return document.getElementById(id); }
-    // function html(id, html){ $(id).innerHTML = html; }
-    // function css(id, style){ $(id).style.cssText += ';'+style; }
-
     // Tiny browser family detection, necessary(?) evil to know the name of the CSS rules.
     var Browser = {
+
+        // Retrieve browser informations
         init: function () {
             this.prefix = this.search(this.dataPrefix) || 'ms';
         },
+
+        // Perfom browser detection, return the matching prefix
         search: function (data) {
             for (var i=0;i<data.length;i++) {
                 var dataString = data[i].string;
@@ -170,6 +176,8 @@
                     return data[i].prefix;
             }
         },
+
+        // Collection of browser detection formulas
         dataPrefix: [
             { string: navigator.userAgent, subString: "AppleWebKit", prefix: "webkit" },
             { prop: window.opera,          subString: "Opera",       prefix: "o" },
@@ -200,7 +208,6 @@
         this.k6x = x;
         this.k6y = y;
         this.k6update();
-        // this.style.webkitTransform = 'translate3d(' + x + 'px,' + y + 'px,0)';
     };
 
     // Resize an element.
@@ -211,35 +218,39 @@
     };
 
     // Update position of an image element
-    var k6updateImage = function () {
+    var k6updateImage = Kassics.k6updateImage = function () {
         this.style.webkitTransform = 'translate3d(' + (this.k6x-0.5) + 'px,' + (this.k6y-0.5) + 'px,0) scale3d(' + this.k6w + ',' + this.k6h + ',1)';
     };
 
     // Update position of a text element
-    var k6updateText = function () {
+    var k6updateText = Kassics.k6updateText = function () {
         this.style.left = this.k6x + 'px';
         this.style.top = this.k6y + 'px';
         this.style.width = this.k6w + 'px';
         this.style.height = this.k6h + 'px';
     };
 
+    // Update position of the stage
+    var k6updateStage = Kassics.k6updateStage = function () {
+        this.style.webkitTransform = 'translate3d(' + (this.k6x) + 'px,' + (this.k6y) + 'px,0) scale3d(' + this.k6w + ',' + this.k6h + ',1)';
+    };
+
     // Change layer for an image.
-    var k6layer = function (layer) {
+    var k6layer = Kassics.k6layer = function (layer) {
         this.style.zIndex = layer;
     };
 
     // Change image opacity.
-    var k6opacity = function (opacity) {
+    var k6opacity = Kassics.k6opacity = function (opacity) {
         this.style.opacity = opacity;
     };
 
     // Set image draggable status.
-    var k6draggable = function (state) {
-        var oldDraggable = this.getAttribute('k6drag');
-        var newDraggable = state ? 'true' : 'false';
-        if (oldDraggable !== newDraggable) {
-            this.setAttribute('k6drag', newDraggable);
-            this.k6stage.stopDragging(this);
+    var k6draggable = Kassics.k6draggable = function (state) {
+        var oldDraggable = this._k6drag;
+        if (oldDraggable !== state) {
+            this._k6drag = state;
+            this.k6stage._onDragChanged(this);
         }
     };
 
@@ -253,7 +264,7 @@
     // }
     // callback called when animation is finished.
     var k6animationID = 0;
-    var k6animate = function (frames, callback) {
+    var k6animate = Kassics.k6animate = function (frames, callback) {
 
         var that = this;
         var name = 'k6a_' + (++k6animationID);
@@ -290,7 +301,7 @@
         if (frames.length === 0) return;
         var duration = frames[frames.length - 1].t;
 
-        // Firefox called appendRule `insertRule` before normalization.
+        // Firefox called appendRule `insertRule` before standardization.
         var appendRule = cssframes.appendRule || cssframes.insertRule;
 
         var idx = 0;
@@ -313,9 +324,13 @@
         }
     };
 
-    // Select browser specific optimized code
-    // if (Browser.prefix === 'webkit') {
-    // }
+    var k6extendStage = function (stage, el) {
+        // Set defaults
+        k6extend(stage, el);
+
+        // Set image specific methods
+        el.k6update = k6updateStage;
+    };
 
     var k6extendImage = function (stage, el) {
         // Set defaults
@@ -358,8 +373,13 @@
                 callback(event, data);
         };
 
-        // Remove from Stage
+        // Remove the element from Stage
         el.k6remove = function () {
+            if (this._k6drag) {
+                // Make sure the element is not being dragged by the user.
+                // Also removing from Stages' draggables.
+                this.k6draggable(false);
+            }
             this.parentNode.removeChild(this);
         };
     };
@@ -368,7 +388,7 @@
     //
     var _dragStart = function (t) {
         // Draggable target.
-        if (t.target && t.target.getAttribute('k6drag') === 'true') {
+        if (t.target && t.target._k6drag) {
             t.drag = t.target;
             t.dragStartX = t.x;
             t.dragStartY = t.y;
@@ -400,11 +420,20 @@
     var Stage = Kassics.Stage = function (options) {
         this.options = options;
         var el = options.el;
+
+        // Make sure it's not a jQuery element.
         while (el && typeof el.length !== 'undefined') {
             el = el[0];
         }
-        this.setElement(el || new Div());
+        this.setElement(el);
+
+        // List of touches in progress
         this.touches = {};
+
+        // List of draggable elements
+        this.draggables = {};
+
+        // Create a start the animation scheduler
         this.scheduler = new Scheduler();
         this.scheduler.start();
     };
@@ -414,7 +443,7 @@
         // Change the element to render to.
         setElement: function (el) {
             this.el = el;
-            k6extendImage(this, el);
+            k6extendStage(this, el);
             this._configure();
         },
 
@@ -437,9 +466,8 @@
             var text = options.text;
             var el = text || image;
 
-            // Generate a CID, store it in the element.
-            var cid = _.uniqueId('k6_');
-            el.id = cid;
+            // Generate an ID, store it in the element.
+            el.id = _.uniqueId('k6_');
 
             // Make it a 'floating' image.
             el.style.display = 'block';
@@ -489,16 +517,29 @@
             this.el.ontouchmove = null;
             this.el.ontouchend = null;
             this.el.onmousedown = null;
-            this.el.onmousemove = null; // off('mousemove');
-            this.el.onmouseup = null;   // off('mouseup');
+            this.el.onmousemove = null;
+            this.el.onmouseup = null;
         },
 
-        stopDragging: function (image) {
-            for (var identifier in this.touches) {
-                var touch = this.touches[identifier];
-                if (touch.drag === image) {
-                    delete this.touches[identifier];
-                    return;
+        // Called when an element changed its dragging status
+        _onDragChanged: function (image) {
+            var status = image._k6drag;
+
+            if (status) {
+                // Add to the list of draggables
+                this.draggables[image.id] = image;
+            }
+            else {
+                // Remove from the list of draggables
+                delete this.draggables[image.id];
+
+                // Stop dragging the element if it was being dragged.
+                for (var identifier in this.touches) {
+                    var touch = this.touches[identifier];
+                    if (touch.drag === image) {
+                        delete this.touches[identifier];
+                        return;
+                    }
                 }
             }
         },
@@ -544,9 +585,33 @@
             var stage = this.k6stage;
             for (var i in e.changedTouches) {
                 var touch = e.changedTouches[i];
-                var t = {x: touch.pageX, y: touch.pageY, target: touch.target};
-                _dragStart(t);
-                stage.touches[touch.identifier] = t;
+                if (touch.pageX) {
+                    var x = touch.pageX;
+                    var y = touch.pageY;
+                    var target = null;
+
+                    // iOS doesn't detect the target appropriately when using translate3d/scale3d.
+                    // So I do it by hand to hide the bug.
+                    var children = stage.draggables;
+                    for (var j in children) {
+                        var c = children[j];
+                        if (c._k6drag) {
+                            var left   = c.k6x - c.k6w / 2;
+                            var right  = c.k6x + c.k6w / 2;
+                            var top    = c.k6y - c.k6h / 2;
+                            var bottom = c.k6y + c.k6h / 2;
+                            if (x >= left && x <= right && y >= top && y <= bottom) {
+                                target = c;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Start dragging.
+                    var t = {x: x, y: y, target: target};
+                    _dragStart(t);
+                    stage.touches[touch.identifier] = t;
+                }
             }
             return false;
         },
@@ -556,12 +621,14 @@
             e.stopPropagation();
             var stage = this.k6stage;
             for (var i in e.changedTouches) {
-                var touch = e.changedTouches[i];6
-                var t = stage.touches[touch.identifier];
-                if (t) {
-                    t.x = touch.pageX;
-                    t.y = touch.pageY;
-                    _dragMove(t);
+                var touch = e.changedTouches[i];
+                if (touch.pageX) {
+                    var t = stage.touches[touch.identifier];
+                    if (t) {
+                        t.x = touch.pageX;
+                        t.y = touch.pageY;
+                        _dragMove(t);
+                    }
                 }
             }
         },
@@ -572,12 +639,14 @@
             var stage = this.k6stage;
             for (var i in e.changedTouches) {
                 var touch = e.changedTouches[i];
-                var t = stage.touches[touch.identifier];
-                if (t) {
-                    t.x = touch.pageX;
-                    t.y = touch.pageY;
-                    _dragEnd(t);
-                    delete stage.touches[touch.identifier];
+                if (touch.pageX) {
+                    var t = stage.touches[touch.identifier];
+                    if (t) {
+                        t.x = touch.pageX;
+                        t.y = touch.pageY;
+                        _dragEnd(t);
+                        delete stage.touches[touch.identifier];
+                    }
                 }
             }
         },

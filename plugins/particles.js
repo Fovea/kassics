@@ -304,7 +304,8 @@
         refreshStage: function () {
             if (!this.def.stage)
                 return;
-            // code from "draw" goes here.
+            
+            // Keep local reference for optimization purpose.
             var defHalfTime = this.def.halfTime;
             var defLifeTime = this.def.lifeTime;
             var defSize0 = this.def.size0;
@@ -314,8 +315,8 @@
             var defAlpha1 = this.def.alpha1;
             var defAlpha2 = this.def.alpha2;
 
-            // Keep a local ref to k6update as an optimization
-            var k6update = this.def.stage.el.k6update;
+            // Keep a local ref to k6update also as an optimization
+            var k6update = Kassics.k6updateImage;
 
             if (defAlpha0 + defAlpha1 + defAlpha2 === 3) {
                 for (var i in this.particles) {
@@ -337,8 +338,8 @@
                         size = image.k6w = image.k6h = p.sizeFactor * (defSize1 * oneMinusCoef + defSize2 * coef);
                     }
 
-                    image.k6x = p.x; // - size * 0.5;
-                    image.k6y = p.y; // - size * 0.5;
+                    image.k6x = p.x;
+                    image.k6y = p.y;
 
                     k6update.call(image);
                 }
