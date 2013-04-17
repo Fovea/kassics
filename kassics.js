@@ -33,6 +33,7 @@
     // Quality of effects, client could adjust, eventually per device.
     Kassics.qualityCoef = 1.0;
 
+
     // Kassics features an animation Scheduler, attached to each `Stage`
     // The animation scheduler will run the `idle(timestamp,dt)` method
     // regulary on registred object. Objects can register an unregister
@@ -57,6 +58,16 @@
         this.cancelAnimationFrame = window.cancelAnimationFrame ||
             window.mozCancelAnimationFrame;
 
+        this.performance = window.performance || {};
+        this.performance.now = (function() {
+                    return window.performance.now       ||
+                           window.performance.mozNow    ||
+                           window.performance.msNow     ||
+                           window.performance.oNow      ||
+                           window.performance.webkitNow ||
+                           function() { return new Date().getTime(); };
+                    })();
+
         // Enable to show performance statistics on the console.
         this.statistics = false;
     };
@@ -68,7 +79,7 @@
 
             if (this.statistics) {
                 // Benchmark idle starts
-                var t0 = +new Date();
+                var t0 = this.performance.now();
             }
 
             // Calculate delta since last frame
@@ -86,7 +97,7 @@
 
             if (this.statistics) {
                 // Benchmark idle ends
-                var t1 = +new Date();
+                var t1 = this.performance.now();
 
                 // Adjust counters, show stats.
                 this._numframe = 1 + (this._numframe || 0);
@@ -136,7 +147,7 @@
             else {
                 // Fallback to setInterval.
                 this.intervalID = window.setInterval(function () {
-                    var timestamp = +new Date();
+                    var timestamp = that.performance.now();
                     that.idle(timestamp);
                 }, 17);
             }
