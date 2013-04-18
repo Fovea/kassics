@@ -58,13 +58,13 @@
         this.cancelAnimationFrame = window.cancelAnimationFrame ||
             window.mozCancelAnimationFrame;
 
-        this.performance = window.performance || {};
+        var performance = this.performance = root.performance || {};
         this.performance.now = (function() {
-                    return window.performance.now       ||
-                           window.performance.mozNow    ||
-                           window.performance.msNow     ||
-                           window.performance.oNow      ||
-                           window.performance.webkitNow ||
+                    return performance.now       ||
+                           performance.mozNow    ||
+                           performance.msNow     ||
+                           performance.oNow      ||
+                           performance.webkitNow ||
                            function() { return new Date().getTime(); };
                     })();
 
@@ -77,9 +77,10 @@
         // Perform the animations
         idle: function (timestamp) {
 
+            var t0;
             if (this.statistics) {
                 // Benchmark idle starts
-                var t0 = this.performance.now();
+                t0 = this.performance.now();
             }
 
             // Calculate delta since last frame
@@ -120,7 +121,7 @@
         },
 
         // Clean the animation from id
-        remove: function (animationID) {
+        remove: function (cid) {
             delete this.animations[cid];
         },
 
@@ -136,7 +137,7 @@
             // reference to the appropriate requestAnimationFrame has been saved
             // in constructor.
             if (this.requestAnimationFrame) {
-                function frame(timestamp) {
+                var frame = function (timestamp) {
                     that.idle(timestamp);
                     if (that.started) {
                         that.requestID = that.requestAnimationFrame.call(window, frame);
@@ -318,7 +319,7 @@
         var idx = 0;
         for (var i in frames) {
             var kf = frames[i];
-            var rule = Math.round(kf.t * 100 / duration) + "% { -webkit-transform: translate3d(" + kf.x + "px," + kf.y + "px,0) scale3d(" + kf.w + "," + kf.h + ", 1); opacity: " + kf.o + "; } ";
+            var rule = Math.round(kf.t * 100 / duration) + "% { " + cssTransform + ": translate3d(" + kf.x + "px," + kf.y + "px,0) scale3d(" + kf.w + "," + kf.h + ", 1); opacity: " + kf.o + "; } ";
             appendRule.call(cssframes, rule);
         }
 
@@ -395,11 +396,30 @@
         };
     };
 
-    // Manage draggable elements.
-    //
-    var _dragStart = function (t) {
-        // Draggable target.
-        if (t.target && t.target._k6drag) {
+    var _dragFindTarget = function (stage, t) {
+
+        // Already has a target.
+        if (t.target) return;
+
+        // iOS doesn't detect the target appropriately when using translate3d/scale3d.
+        // So I do it by hand to hide the bug.
+        var x = t.x;
+        var y = t.y;
+        var children = stage.draggables;
+        for (var j in children) {
+            var c = children[j];
+            if (c._k6drag) {
+                var left   = c.k6x - c.k6w / 2;
+                var right  = c.k6x + c.k6w / 2;
+                var top    = c.k6y - c.k6h / 2;
+                var bottom = c.k6y + c.k6h / 2;
+                if (x >= left && x <= right && y >= top && y <= bottom) {
+                    t.target = c;
+                    break;
+                }
+            }
+        }
+        if (t.target) {
             t.drag = t.target;
             t.dragStartX = t.x;
             t.dragStartY = t.y;
@@ -409,8 +429,22 @@
         }
     };
 
-    var _dragMove = function (t) {
-        if (t.drag) {
+    // Manage draggable elements.
+    var _dragStart = function (stage, t) {
+        // Find a draggable target.
+        if (!t.target) {
+            _dragFindTarget(stage, t);
+        }
+    };
+
+    var _dragMove = function (stage, t) {
+
+        if (!t.target) {
+            // No draggable target, keep looking for one.
+            _dragFindTarget(stage, t);
+        } 
+        else if (t.drag) {
+            // Draggable target found, move it.
             var newX = t.x - t.dragStartX + t.dragTargetX;
             var newY = t.y - t.dragStartY + t.dragTargetY;
             t.drag.k6position(newX, newY);
@@ -418,7 +452,7 @@
         }
     };
 
-    var _dragEnd = function (t) {
+    var _dragEnd = function (stage, t) {
         if (t.drag) {
             var newX = t.x - t.dragStartX + t.dragTargetX;
             var newY = t.y - t.dragStartY + t.dragTargetY;
@@ -559,33 +593,38 @@
             e.preventDefault();
             e.stopPropagation();
             var identifier = -(1 + e.which);
-            var t = {x: e.clientX, y: e.clientY, target: e.target||e.srcElement};
-            _dragStart(t);
-            this.k6stage.touches[identifier] = t;
+            var stage = this.k6stage;
+            var t = {x: e.clientX, y: e.clientY, target: null};
+            _dragStart(stage, t);
+            stage.touches[identifier] = t;
             return false;
         },
+
         mousemove: function (e) {
             e.preventDefault();
             e.stopPropagation();
             var identifier = -(1 + e.which);
-            var t = this.k6stage.touches[identifier];
+            var stage = this.k6stage;
+            var t = stage.touches[identifier];
             if (t) {
                 t.x = e.clientX;
                 t.y = e.clientY;
-                _dragMove(t);
+                _dragMove(stage, t);
             }
             return false;
         },
+
         mouseup: function (e) {
             e.preventDefault();
             e.stopPropagation();
             var identifier = -(1 + e.which);
-            var t = this.k6stage.touches[identifier];
+            var stage = this.k6stage;
+            var t = stage.touches[identifier];
             if (t) {
                 t.x = e.clientX;
                 t.y = e.clientY;
-                _dragEnd(t);
-                delete this.k6stage.touches[identifier];
+                _dragEnd(stage, t);
+                delete stage.touches[identifier];
             }
             return false;
         },
@@ -599,28 +638,10 @@
                 if (touch.pageX) {
                     var x = touch.pageX;
                     var y = touch.pageY;
-                    var target = null;
-
-                    // iOS doesn't detect the target appropriately when using translate3d/scale3d.
-                    // So I do it by hand to hide the bug.
-                    var children = stage.draggables;
-                    for (var j in children) {
-                        var c = children[j];
-                        if (c._k6drag) {
-                            var left   = c.k6x - c.k6w / 2;
-                            var right  = c.k6x + c.k6w / 2;
-                            var top    = c.k6y - c.k6h / 2;
-                            var bottom = c.k6y + c.k6h / 2;
-                            if (x >= left && x <= right && y >= top && y <= bottom) {
-                                target = c;
-                                break;
-                            }
-                        }
-                    }
 
                     // Start dragging.
-                    var t = {x: x, y: y, target: target};
-                    _dragStart(t);
+                    var t = {x: x, y: y, target: null};
+                    _dragStart(stage, t);
                     stage.touches[touch.identifier] = t;
                 }
             }
@@ -638,7 +659,7 @@
                     if (t) {
                         t.x = touch.pageX;
                         t.y = touch.pageY;
-                        _dragMove(t);
+                        _dragMove(stage, t);
                     }
                 }
             }
@@ -655,12 +676,12 @@
                     if (t) {
                         t.x = touch.pageX;
                         t.y = touch.pageY;
-                        _dragEnd(t);
+                        _dragEnd(stage, t);
                         delete stage.touches[touch.identifier];
                     }
                 }
             }
-        },
+        }
     });
 
     return Kassics;

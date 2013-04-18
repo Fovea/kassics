@@ -11,10 +11,13 @@
     "main": "./kassics.js",
     "repository": {
         "type": "git",
-        "url":  "git://github.com:Fovea/jackbone.git"
+        "url":  "git://github.com:Fovea/kassics.git"
     },
     "devDependencies"  : {
         "jquery"     : ">=1.0.0",
-        "underscore" : ">=1.4.3"
+        "underscore" : ">=1.4.3",
+        "docco": "latest",
+        "jshint": "latest",
+        "uglify-js": "latest"
     }
 }
