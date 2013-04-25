@@ -570,12 +570,16 @@
                 this.el.ontouchstart = this.touchstart;
                 this.el.ontouchmove = this.touchmove;
                 this.el.ontouchend = this.touchend;
+                this.el.ontouchcancel = this.touchcancel;
+                this.el.ontouchleave = this.touchend;
             }
         },
         unbindEvents: function () {
             this.el.ontouchstart = null;
             this.el.ontouchmove = null;
             this.el.ontouchend = null;
+            this.el.ontouchcancel = null;
+            this.el.ontouchleave = null;
             this.el.onmousedown = null;
             this.el.onmousemove = null;
             this.el.onmouseup = null;
@@ -647,6 +651,7 @@
         touchstart: function (e) {
             e.preventDefault();
             e.stopPropagation();
+
             var stage = this.k6stage;
             for (var i in e.changedTouches) {
                 var touch = e.changedTouches[i];
@@ -694,6 +699,20 @@
                         _dragEnd(stage, t);
                         delete stage.touches[touch.identifier];
                     }
+                }
+            }
+        },
+
+        touchcancel: function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var stage = this.k6stage;
+            for (var i in e.changedTouches) {
+                var touch = e.changedTouches[i];
+                var t = stage.touches[touch.identifier];
+                if (t) {
+                    _dragEnd(stage, t);
+                    delete stage.touches[touch.identifier];
                 }
             }
         }
