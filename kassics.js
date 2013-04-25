@@ -1,4 +1,4 @@
-//     Kassics.js 0.0.4
+//     Kassics.js
 //
 //     (c) 2013, Jean-Christophe Hoelt, Fovea.cc
 //     Kassics may be freely distributed under the MIT license.
@@ -28,7 +28,7 @@
     }
 
     // Keep in sync with package.json and readme
-    Kassics.VERSION = "0.0.4";
+    Kassics.VERSION = "0.0.6";
 
     // Quality of effects, client could adjust, eventually per device.
     Kassics.qualityCoef = 1.0;
@@ -316,7 +316,6 @@
         // Firefox called appendRule `insertRule` before standardization.
         var appendRule = cssframes.appendRule || cssframes.insertRule;
 
-        var idx = 0;
         for (var i in frames) {
             var kf = frames[i];
             var rule = Math.round(kf.t * 100 / duration) + "% { " + cssTransform + ": translate3d(" + kf.x + "px," + kf.y + "px,0) scale3d(" + kf.w + "," + kf.h + ", 1); opacity: " + kf.o + "; } ";
@@ -406,16 +405,32 @@
         var x = t.x;
         var y = t.y;
         var children = stage.draggables;
+        var touches  = stage.touches;
         for (var j in children) {
             var c = children[j];
             if (c._k6drag) {
+
+                // Check if click/touch falls inside the element's bounding rectangle.
                 var left   = c.k6x - c.k6w / 2;
                 var right  = c.k6x + c.k6w / 2;
                 var top    = c.k6y - c.k6h / 2;
                 var bottom = c.k6y + c.k6h / 2;
                 if (x >= left && x <= right && y >= top && y <= bottom) {
-                    t.target = c;
-                    break;
+
+                    // c is a possible target, check if it's not already being dragged.
+                    var alreadyDragged = false;
+                    for (var ti in touches) {
+                        var touch = touches[ti];
+                        if (touch.target == c) {
+                            alreadyDragged = true;
+                        }
+                    }
+
+                    // Set c as dragging target if it's not already being dragged.
+                    if (!alreadyDragged) {
+                        t.target = c;
+                        break;
+                    }
                 }
             }
         }

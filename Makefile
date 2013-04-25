@@ -30,7 +30,7 @@ check-phantomjs:
 	@which phantomjs > /dev/null || ( echo 'Please PhantomJS, http://phantomjs.org/'; exit 1 )
 
 check-version:
-	@test "${VERSION_1}" != "${VERSION_2}" && echo ERROR: Version in ${SRC_FILE} and package.json do not correspond. || echo "Jackbone version: ${VERSION_1}"
+	@test "${VERSION_1}" != "${VERSION_2}" && echo ERROR: Version in ${SRC_FILE} and package.json do not correspond. || echo "Kassics version: ${VERSION_1}"
 	@test "${VERSION_1}" != "${VERSION_2}" && exit 1 || exit 0
 
 all: build tests
