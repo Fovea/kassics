@@ -262,7 +262,16 @@
         var oldDraggable = this._k6drag;
         if (oldDraggable !== state) {
             this._k6drag = state;
-            this.k6stage._onDragChanged(this);
+            this.k6stage._onDragOrClickChanged(this, state);
+        }
+    };
+
+    // Set image draggable status.
+    var k6clickable = Kassics.k6clickable = function (state) {
+        var oldClickable = this._k6click;
+        if (oldClickable !== state) {
+            this._k6click = state;
+            this.k6stage._onDragOrClickChanged(this, state);
         }
     };
 
@@ -366,6 +375,7 @@
         el.k6size = k6size;
         el.k6layer = k6layer;
         el.k6draggable = k6draggable;
+        el.k6clickable = k6clickable;
         el.k6opacity = k6opacity;
         el.k6animate = k6animate;
         el.k6stage = stage;
@@ -386,11 +396,16 @@
 
         // Remove the element from Stage
         el.k6remove = function () {
+
+            // Make sure the element is not being dragged or clicked by the user.
+            // Also removing from Stages' draggables.
             if (this._k6drag) {
-                // Make sure the element is not being dragged by the user.
-                // Also removing from Stages' draggables.
                 this.k6draggable(false);
             }
+            if (this._k6click) {
+                this.k6clickable(false);
+            }
+
             this.parentNode.removeChild(this);
         };
     };
@@ -408,7 +423,7 @@
         var touches  = stage.touches;
         for (var j in children) {
             var c = children[j];
-            if (c._k6drag) {
+            if (c._k6drag || c._k6click) {
 
                 // Check if click/touch falls inside the element's bounding rectangle.
                 var left   = c.k6x - c.k6w / 2;
@@ -418,23 +433,25 @@
                 if (x >= left && x <= right && y >= top && y <= bottom) {
 
                     // c is a possible target, check if it's not already being dragged.
-                    var alreadyDragged = false;
+                    var alreadyATarget = false;
                     for (var ti in touches) {
                         var touch = touches[ti];
                         if (touch.target == c) {
-                            alreadyDragged = true;
+                            alreadyATarget = true;
                         }
                     }
 
                     // Set c as dragging target if it's not already being dragged.
-                    if (!alreadyDragged) {
+                    if (!alreadyATarget) {
                         t.target = c;
                         break;
                     }
                 }
             }
         }
-        if (t.target) {
+
+        // If a new draggable target was found, send dragstart.
+        if (t.target && t.target._k6drag) {
             t.drag = t.target;
             t.dragStartX = t.x;
             t.dragStartY = t.y;
@@ -444,14 +461,22 @@
         }
     };
 
-    // Manage draggable elements.
+    // Manage draggable/clickable elements.
     var _dragStart = function (stage, t) {
+
         // Find a draggable target.
         if (!t.target) {
             _dragFindTarget(stage, t);
+
+            // Special case, handle the clickables.
+            if (t.target && t.target._k6click) {
+                t.click = t.target;
+                t.click.k6trigger('click', {target:t.click, x:t.x, y:t.y});
+            }
         }
     };
 
+    // Manage dragging movement.
     var _dragMove = function (stage, t) {
 
         if (!t.target) {
@@ -467,6 +492,7 @@
         }
     };
 
+    // Manage the end of dragging.
     var _dragEnd = function (stage, t) {
         if (t.drag) {
             var newX = t.x - t.dragStartX + t.dragTargetX;
@@ -546,6 +572,7 @@
             // Set initial values from options.
             el.k6layer(options.layer);
             el.k6draggable(options.draggable);
+            el.k6clickable(options.clickable);
 
             el.k6x = options.x;
             el.k6y = options.y;
@@ -558,6 +585,7 @@
             return el;
         },
 
+        // Listen to incoming events.
         bindEvents: function () {
             this.unbindEvents();
             if (typeof document.body.ontouchstart === 'undefined') {
@@ -574,7 +602,11 @@
                 this.el.ontouchleave = this.touchend;
             }
         },
+
+        // Stop listening to events.
         unbindEvents: function () {
+
+            // Remove bindings.
             this.el.ontouchstart = null;
             this.el.ontouchmove = null;
             this.el.ontouchend = null;
@@ -583,12 +615,13 @@
             this.el.onmousedown = null;
             this.el.onmousemove = null;
             this.el.onmouseup = null;
+
+            // Reset the touches list
+            this.touches = {};
         },
 
         // Called when an element changed its dragging status
-        _onDragChanged: function (image) {
-            var status = image._k6drag;
-
+        _onDragOrClickChanged: function (image, status) {
             if (status) {
                 // Add to the list of draggables
                 this.draggables[image.id] = image;
@@ -600,7 +633,7 @@
                 // Stop dragging the element if it was being dragged.
                 for (var identifier in this.touches) {
                     var touch = this.touches[identifier];
-                    if (touch.drag === image) {
+                    if (touch.drag === image || touch.click === image) {
                         delete this.touches[identifier];
                         return;
                     }
@@ -608,6 +641,7 @@
             }
         },
 
+        // Handle the mousedown event for the stage element
         mousedown: function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -619,6 +653,7 @@
             return false;
         },
 
+        // Handle the mousemove event for the stage element
         mousemove: function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -633,6 +668,7 @@
             return false;
         },
 
+        // Handle the mouseup event for the stage element
         mouseup: function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -648,6 +684,7 @@
             return false;
         },
 
+        // Handle the touchstart event for the stage element
         touchstart: function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -668,6 +705,7 @@
             return false;
         },
 
+        // Handle the touchmove event for the stage element
         touchmove: function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -685,6 +723,7 @@
             }
         },
 
+        // Handle the touchend (and touchleave) event for the stage element
         touchend: function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -703,6 +742,7 @@
             }
         },
 
+        // Handle the touchcancel event for the stage element
         touchcancel: function (e) {
             e.preventDefault();
             e.stopPropagation();
