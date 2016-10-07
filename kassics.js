@@ -231,7 +231,7 @@
 
     // Update position of an image element
     var k6updateImage = Kassics.k6updateImage = function () {
-        this.style.webkitTransform = 'translate3d(' + (this.k6x-0.5) + 'px,' + (this.k6y-0.5) + 'px,0) scale3d(' + this.k6w + ',' + this.k6h + ',1)';
+        this.style.webkitTransform = 'translate3d(' + (this.k6x-0.5-this.k6w*0.5) + 'px,' + (this.k6y-0.5-this.k6h*0.5) + 'px,0) scale3d(' + this.k6w + ',' + this.k6h + ',1)';
     };
 
     // Update position of a text element
@@ -563,6 +563,7 @@
                 el.style.top = 0;
                 el.style.width  = '1px';
                 el.style.height = '1px';
+                el.style.webkitTransformOrigin = 'top left';
                 k6extendImage(this, el);
             }
             else if (text) {
