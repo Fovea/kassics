@@ -1,23 +1,27 @@
 {
-    "name": "kassics",
-    "description": "Lighting fast 2d graphics without canvas",
-    "keywords": [ "2d", "graphics", "canvas" ],
-    "version": "0.0.6",
-    "homepage": "https://github.com/Fovea/kassics",
-    "author": {
-        "name": "Jean-Christophe Hoelt",
-        "email": "hoelt@fovea.cc"
-    },
-    "main": "./kassics.js",
-    "repository": {
-        "type": "git",
-        "url":  "git://github.com:Fovea/kassics.git"
-    },
-    "devDependencies"  : {
-        "jquery"     : ">=1.0.0",
-        "underscore" : ">=1.4.3",
-        "docco": "latest",
-        "jshint": "latest",
-        "uglify-js": "latest"
-    }
+  "name": "kassics",
+  "description": "Lighting fast 2d graphics without canvas",
+  "keywords": [
+    "2d",
+    "graphics",
+    "canvas"
+  ],
+  "version": "0.1.0",
+  "homepage": "https://github.com/Fovea/kassics",
+  "author": {
+    "name": "Jean-Christophe Hoelt",
+    "email": "hoelt@fovea.cc"
+  },
+  "main": "./kassics.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com:Fovea/kassics.git"
+  },
+  "devDependencies": {
+    "jquery": ">=1.0.0",
+    "underscore": ">=1.4.3",
+    "docco": "latest",
+    "jshint": "latest",
+    "uglify-js": "latest"
+  }
 }
