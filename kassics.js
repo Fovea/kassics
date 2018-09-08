@@ -643,6 +643,7 @@
 
         // Handle the mousedown event for the stage element
         mousedown: function (e) {
+            console.log('md');
             e.preventDefault();
             e.stopPropagation();
             var identifier = -(1 + e.which);
@@ -655,6 +656,7 @@
 
         // Handle the mousemove event for the stage element
         mousemove: function (e) {
+            console.log('mm');
             e.preventDefault();
             e.stopPropagation();
             var identifier = -(1 + e.which);
@@ -670,6 +672,7 @@
 
         // Handle the mouseup event for the stage element
         mouseup: function (e) {
+            console.log('mu');
             e.preventDefault();
             e.stopPropagation();
             var identifier = -(1 + e.which);
@@ -686,6 +689,7 @@
 
         // Handle the touchstart event for the stage element
         touchstart: function (e) {
+            console.log('ts');
             e.preventDefault();
             e.stopPropagation();
 
@@ -707,6 +711,7 @@
 
         // Handle the touchmove event for the stage element
         touchmove: function (e) {
+            console.log('tm');
             e.preventDefault();
             e.stopPropagation();
             var stage = this.k6stage;
@@ -725,6 +730,7 @@
 
         // Handle the touchend (and touchleave) event for the stage element
         touchend: function (e) {
+            console.log('te');
             e.preventDefault();
             e.stopPropagation();
             var stage = this.k6stage;
